@@ -1,4 +1,4 @@
-import { CTF_EXCHANGE_ADDRESS, NEG_RISK_CTF_EXCHANGE_ADDRESS } from '@/lib/contracts'
+import type { Address } from 'viem'
 import { DEFAULT_CHAIN_ID } from '@/lib/network'
 
 export const DEFAULT_ERROR_MESSAGE = 'Internal server error. Try again in a few moments.'
@@ -30,20 +30,6 @@ export const OUTCOME_INDEX = {
 
 export const MICRO_UNIT = 1_000_000
 
-export const EIP712_DOMAIN = {
-  name: 'CTF Exchange',
-  version: '2',
-  chainId: DEFAULT_CHAIN_ID,
-  verifyingContract: CTF_EXCHANGE_ADDRESS,
-} as const
-
-export const NEG_RISK_EIP712_DOMAIN = {
-  name: 'CTF Exchange',
-  version: '2',
-  chainId: DEFAULT_CHAIN_ID,
-  verifyingContract: NEG_RISK_CTF_EXCHANGE_ADDRESS,
-} as const
-
 export const EIP712_TYPES = {
   Order: [
     { name: 'salt', type: 'uint256' },
@@ -60,8 +46,13 @@ export const EIP712_TYPES = {
   ],
 }
 
-export function getExchangeEip712Domain(isNegRisk?: boolean) {
-  return isNegRisk ? NEG_RISK_EIP712_DOMAIN : EIP712_DOMAIN
+export function getExchangeEip712DomainForContract(verifyingContract: Address) {
+  return {
+    name: 'CTF Exchange',
+    version: '2',
+    chainId: DEFAULT_CHAIN_ID,
+    verifyingContract,
+  } as const
 }
 
 export const tableHeaderClass = 'px-2 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase sm:px-3'

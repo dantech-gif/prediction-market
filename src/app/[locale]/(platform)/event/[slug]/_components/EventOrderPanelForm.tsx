@@ -35,10 +35,14 @@ import { useHasHydrated } from '@/hooks/useHasHydrated'
 import { useOutcomeLabel } from '@/hooks/useOutcomeLabel'
 import { useSignaturePromptRunner } from '@/hooks/useSignaturePromptRunner'
 import { addressToBuilderCode } from '@/lib/builder-code'
-import { CLOB_ORDER_TYPE, getExchangeEip712Domain, ORDER_SIDE, ORDER_TYPE, OUTCOME_INDEX } from '@/lib/constants'
+import { CLOB_ORDER_TYPE, getExchangeEip712DomainForContract, ORDER_SIDE, ORDER_TYPE, OUTCOME_INDEX } from '@/lib/constants'
 import { resolveEventPagePath } from '@/lib/events-routing'
 import { formatCentsLabel, formatCurrency, formatSharesLabel, toCents } from '@/lib/formatters'
 import { resolveFallbackOutcomeUnitPrice, resolveMarketOutcome } from '@/lib/market-pricing'
+import {
+  resolveExchangeAddressForMarket,
+  resolveNegRiskAdapterAddressFromMarket,
+} from '@/lib/neg-risk-routing'
 import {
   applyPositionDeltasToUserPositions,
   buildOptimisticOpenOrder,
@@ -72,44 +76,6 @@ function resolveIndexSetFromOutcomeIndex(outcomeIndex: number | undefined) {
     return 2
   }
   return null
-}
-
-function resolveNegRiskAdapterAddressFromMarket(
-  market: Market | null | undefined,
-): `0x${string}` | null {
-  if (!market) {
-    return null
-  }
-
-  const oracle = normalizeAddress(market.condition?.oracle)
-  if (oracle) {
-    return oracle
-  }
-
-  function readAdapter(source: unknown) {
-    if (!source || typeof source !== 'object') {
-      return null
-    }
-
-    const value = (source as Record<string, unknown>).adapter_address
-    if (typeof value !== 'string') {
-      return null
-    }
-
-    return normalizeAddress(value)
-  }
-
-  if (typeof market.metadata === 'string') {
-    try {
-      const parsed = JSON.parse(market.metadata) as unknown
-      return readAdapter(parsed)
-    }
-    catch {
-      return null
-    }
-  }
-
-  return readAdapter(market.metadata)
 }
 
 function markConditionAsClaimedInPositions<T extends {
@@ -881,6 +847,10 @@ export default function EventOrderPanelForm({
     () => resolveNegRiskAdapterAddressFromMarket(activeMarket),
     [activeMarket],
   )
+  const orderExchangeAddress = useMemo(
+    () => resolveExchangeAddressForMarket(activeMarket, isNegRiskMarket),
+    [activeMarket, isNegRiskMarket],
+  )
 
   const resolveDisplayOutcomeLabel = useCallback((
     outcomeIndex: number | null | undefined,
@@ -911,7 +881,10 @@ export default function EventOrderPanelForm({
     currentTimestamp,
     resolveDisplayOutcomeLabel,
   })
-  const orderDomain = useMemo(() => getExchangeEip712Domain(isNegRiskMarket), [isNegRiskMarket])
+  const orderDomain = useMemo(
+    () => orderExchangeAddress ? getExchangeEip712DomainForContract(orderExchangeAddress) : null,
+    [orderExchangeAddress],
+  )
   const { positionsQuery, aggregatedPositionShares } = useEventOrderPanelPositions({
     makerAddress,
     conditionId: activeMarket?.condition_id,
@@ -1315,6 +1288,11 @@ export default function EventOrderPanelForm({
 
     let signature: string
     try {
+      if (!orderDomain) {
+        handleOrderErrorFeedback(t('Trade failed'), t('Could not resolve this market exchange. Refresh and try again.'))
+        return
+      }
+
       signature = await runWithSignaturePrompt(() => signOrderPayload({
         payload,
         domain: orderDomain,

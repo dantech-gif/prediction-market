@@ -33,6 +33,7 @@ import {
   CONDITIONAL_TOKENS_CONTRACT,
   CTF_AUTO_REDEEM_ADDRESS,
   CTF_EXCHANGE_ADDRESS,
+  LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS,
   NEG_RISK_CTF_EXCHANGE_ADDRESS,
   UMA_NEG_RISK_ADAPTER_ADDRESS,
   UMA_NEG_RISK_ADAPTER_LEGACY_ADDRESS,
@@ -562,6 +563,7 @@ function TradingOnboardingProviderContent({
     const exchanges = [
       CTF_EXCHANGE_ADDRESS as `0x${string}`,
       NEG_RISK_CTF_EXCHANGE_ADDRESS as `0x${string}`,
+      LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS as `0x${string}`,
     ]
     const results = await Promise.all(
       exchanges.map(exchange => fetchReferralLocked(exchange, depositWallet)),
@@ -582,12 +584,14 @@ function TradingOnboardingProviderContent({
       CONDITIONAL_TOKENS_CONTRACT,
       CTF_EXCHANGE_ADDRESS,
       NEG_RISK_CTF_EXCHANGE_ADDRESS,
+      LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS,
       UMA_NEG_RISK_ADAPTER_ADDRESS,
       UMA_NEG_RISK_ADAPTER_LEGACY_ADDRESS,
     ] as const
     const conditionalOperators = [
       CTF_EXCHANGE_ADDRESS,
       NEG_RISK_CTF_EXCHANGE_ADDRESS,
+      LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS,
       UMA_NEG_RISK_ADAPTER_ADDRESS,
       UMA_NEG_RISK_ADAPTER_LEGACY_ADDRESS,
     ] as const

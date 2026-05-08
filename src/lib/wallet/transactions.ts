@@ -12,6 +12,7 @@ import {
   CTF_AUTO_REDEEM_ADDRESS,
   CTF_EXCHANGE_ADDRESS,
   DEPOSIT_WALLET_FACTORY_ADDRESS,
+  LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS,
   NEG_RISK_CTF_EXCHANGE_ADDRESS,
   UMA_NEG_RISK_ADAPTER_ADDRESS,
   UMA_NEG_RISK_ADAPTER_LEGACY_ADDRESS,
@@ -288,9 +289,11 @@ export function buildApproveTokenCalls(): WalletCall[] {
     buildCollateralApproveCall(CTF_EXCHANGE_ADDRESS),
     buildConditionalSetApprovalForAllCall(CTF_EXCHANGE_ADDRESS),
     buildCollateralApproveCall(NEG_RISK_CTF_EXCHANGE_ADDRESS),
+    buildCollateralApproveCall(LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS),
     buildCollateralApproveCall(UMA_NEG_RISK_ADAPTER_ADDRESS),
     buildCollateralApproveCall(UMA_NEG_RISK_ADAPTER_LEGACY_ADDRESS),
     buildConditionalSetApprovalForAllCall(NEG_RISK_CTF_EXCHANGE_ADDRESS),
+    buildConditionalSetApprovalForAllCall(LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS),
     buildConditionalSetApprovalForAllCall(UMA_NEG_RISK_ADAPTER_ADDRESS),
     buildConditionalSetApprovalForAllCall(UMA_NEG_RISK_ADAPTER_LEGACY_ADDRESS),
   ]
@@ -311,7 +314,11 @@ export function buildSetReferralCalls(options: ReferralOptions): WalletCall[] {
   const affiliate = options.affiliate ?? zeroAddress
   const sharePercent = Math.max(0, Math.min(100, Math.trunc(options.affiliateSharePercent ?? 0)))
   const affiliatePercentage = affiliate === zeroAddress ? 0n : BigInt(sharePercent)
-  const exchanges = options.exchanges ?? [CTF_EXCHANGE_ADDRESS, NEG_RISK_CTF_EXCHANGE_ADDRESS]
+  const exchanges = options.exchanges ?? [
+    CTF_EXCHANGE_ADDRESS,
+    NEG_RISK_CTF_EXCHANGE_ADDRESS,
+    LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS,
+  ]
 
   return exchanges.map(exchange => createWalletCall(exchange, encodeFunctionData({
     abi: exchangeReferralAbi,
@@ -323,7 +330,7 @@ export function buildSetReferralCalls(options: ReferralOptions): WalletCall[] {
 export function buildClaimFeesCalls(options?: ClaimFeesOptions): WalletCall[] {
   const exchanges = options?.exchanges?.length
     ? options.exchanges
-    : [CTF_EXCHANGE_ADDRESS, NEG_RISK_CTF_EXCHANGE_ADDRESS]
+    : [CTF_EXCHANGE_ADDRESS, NEG_RISK_CTF_EXCHANGE_ADDRESS, LEGACY_NEG_RISK_CTF_EXCHANGE_ADDRESS]
 
   return exchanges.map(exchange => createWalletCall(exchange, encodeFunctionData({
     abi: exchangeFeeAbi,

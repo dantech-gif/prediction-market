@@ -31,8 +31,9 @@ import { useAppKit } from '@/hooks/useAppKit'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useSignaturePromptRunner } from '@/hooks/useSignaturePromptRunner'
 import { fetchOrderBookSummary } from '@/lib/clob'
-import { getExchangeEip712Domain, ORDER_SIDE, ORDER_TYPE, OUTCOME_INDEX } from '@/lib/constants'
+import { getExchangeEip712DomainForContract, ORDER_SIDE, ORDER_TYPE, OUTCOME_INDEX } from '@/lib/constants'
 import { formatAmountInputValue, formatCentsLabel } from '@/lib/formatters'
+import { resolveExchangeAddressForMarket } from '@/lib/neg-risk-routing'
 import { applyPositionDeltasToPublicPositions, updateQueryDataWhere } from '@/lib/optimistic-trading'
 import { calculateMarketFill, normalizeBookLevels } from '@/lib/order-panel-utils'
 import { buildOrderPayload, submitOrder } from '@/lib/orders'
@@ -58,6 +59,7 @@ interface SellModalPayload {
   sellBids: NormalizedBookLevel[]
   tokenId: string | null
   isNegRisk: boolean
+  exchangeAddress: `0x${string}` | null
 }
 
 interface LoadMoreStateValue {
@@ -665,12 +667,14 @@ function useSellPositionFlow({
       receiveAmount: null,
       sellBids: [],
       tokenId: position.asset ?? null,
-      isNegRisk: false,
+      isNegRisk: Boolean(position.negativeRisk),
+      exchangeAddress: null,
     })
 
     const eventSlug = position.eventSlug || position.slug
     let tokenId = position.asset ?? null
-    let isNegRisk = false
+    let isNegRisk = Boolean(position.negativeRisk)
+    let exchangeAddress: `0x${string}` | null = null
 
     if (eventSlug && position.conditionId) {
       try {
@@ -679,8 +683,10 @@ function useSellPositionFlow({
         )
         if (response.ok) {
           const payload = await response.json()
+          const market = payload?.data ?? null
           const outcomes = payload?.data?.outcomes ?? []
-          isNegRisk = Boolean(payload?.data?.event_enable_neg_risk || payload?.data?.neg_risk)
+          isNegRisk = Boolean(market?.event_enable_neg_risk || market?.neg_risk)
+          exchangeAddress = resolveExchangeAddressForMarket(market, isNegRisk)
           const matchedOutcome = outcomes.find((outcome: { outcome_index?: number }) =>
             outcome.outcome_index === resolvedOutcomeIndex,
           )
@@ -693,6 +699,7 @@ function useSellPositionFlow({
               ...current,
               tokenId,
               isNegRisk,
+              exchangeAddress,
             }
           })
         }
@@ -786,6 +793,7 @@ function useSellPositionFlow({
       position,
       tokenId,
       isNegRisk,
+      exchangeAddress,
       sellBids,
     } = sellModalPayload
     const eventSlug = position.eventSlug || position.slug
@@ -850,7 +858,13 @@ function useSellPositionFlow({
       updated_at: timestamp,
     }
 
-    const orderDomain = getExchangeEip712Domain(isNegRisk)
+    const orderExchangeAddress = exchangeAddress ?? resolveExchangeAddressForMarket(null, isNegRisk)
+    if (!orderExchangeAddress) {
+      handleOrderErrorFeedback('Trade failed', 'Could not resolve this market exchange. Refresh and try again.')
+      return
+    }
+
+    const orderDomain = getExchangeEip712DomainForContract(orderExchangeAddress)
     const payload = buildOrderPayload({
       makerAddress,
       outcome: outcomePayload,
