@@ -372,7 +372,9 @@ export async function listHomeFeaturedHotTopics(
       }
     }
 
-    return nextTopics.slice(0, FEATURED_HOT_TOPICS_TARGET_COUNT)
+    return nextTopics
+      .sort((left, right) => right.volume24h - left.volume24h)
+      .slice(0, FEATURED_HOT_TOPICS_TARGET_COUNT)
   }
 
   const { data, error } = await runQuery(async () => {
