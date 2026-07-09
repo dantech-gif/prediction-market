@@ -1043,6 +1043,29 @@ function resolveTeamTotalMarketHeaderTitle(market: Market | null) {
     || descriptor
 }
 
+function resolveHalftimeResultHeaderTitle(market: Market | null) {
+  const normalizedText = normalizeComparableText([
+    market?.sports_market_type,
+    market?.sports_group_item_title,
+    market?.short_title,
+    market?.title,
+  ].filter(Boolean).join(' '))
+
+  if (/\b(?:second half|2nd half|2h)\s+(?:result|moneyline)\b/.test(normalizedText)) {
+    return 'Second Half Result'
+  }
+
+  if (/\b(?:first half|1st half|1h)\s+(?:result|moneyline)\b/.test(normalizedText)) {
+    return 'First Half Result'
+  }
+
+  if (/\bhalf\s*time\s+(?:result|moneyline)\b/.test(normalizedText)) {
+    return 'Halftime Result'
+  }
+
+  return null
+}
+
 export function normalizeComparableText(value: string | null | undefined) {
   return value
     ?.normalize('NFKD')
@@ -1430,6 +1453,11 @@ export function resolveTradeHeaderTitle({
   if (normalizedMarketType.includes('exact score')) {
     const descriptor = resolveMarketDescriptor(selectedMarket)
     return descriptor ? `Exact Score: ${descriptor}` : 'Exact Score'
+  }
+
+  const halftimeResultTitle = resolveHalftimeResultHeaderTitle(selectedMarket)
+  if (halftimeResultTitle) {
+    return halftimeResultTitle
   }
 
   if (marketType !== 'moneyline') {
